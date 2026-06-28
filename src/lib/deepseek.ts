@@ -75,38 +75,12 @@ export async function validateKey(key: string): Promise<{ ok: boolean; message?:
   }
 }
 
-/**
- * Conversa com a Clara via DeepSeek, transmitindo os tokens conforme chegam
- * (efeito de digitação ao vivo). Retorna o texto completo ao final.
- */
-export async function streamClara(
-  history: ChatMsg[],
-  key: string,
-  onToken: (delta: string) => void,
-  signal?: AbortSignal,
-): Promise<string> {
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key.trim()}` },
-    body: JSON.stringify({
-      model: "deepseek-chat",
-      messages: [CLARA_SYSTEM, ...history],
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 320,
-    }),
-    signal,
-  });
-
-  if (!res.ok || !res.body) {
-    throw new DeepSeekError(res.status, friendlyError(res.status));
-  }
-
-  const reader = res.body.getReader();
+/** Lê um stream SSE (OpenAI-compatible) e entrega os deltas de conteúdo. */
+async function consumeSSE(body: ReadableStream<Uint8Array>, onToken: (d: string) => void): Promise<string> {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let full = "";
   let buffer = "";
-
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -128,4 +102,50 @@ export async function streamClara(
     }
   }
   return full.trim();
+}
+
+/**
+ * BYOK: conversa direto com a DeepSeek usando a chave do próprio usuário.
+ * Transmite os tokens conforme chegam (digitação ao vivo).
+ */
+export async function streamClara(
+  history: ChatMsg[],
+  key: string,
+  onToken: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key.trim()}` },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages: [CLARA_SYSTEM, ...history],
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 320,
+    }),
+    signal,
+  });
+  if (!res.ok || !res.body) throw new DeepSeekError(res.status, friendlyError(res.status));
+  return consumeSSE(res.body, onToken);
+}
+
+/**
+ * Modo proxy: chama o backend serverless (a chave fica no servidor).
+ * Envia só a conversa; o proxy injeta a persona da Clara.
+ */
+export async function streamViaProxy(
+  proxyUrl: string,
+  history: ChatMsg[],
+  onToken: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const res = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: history }),
+    signal,
+  });
+  if (!res.ok || !res.body) throw new DeepSeekError(res.status, friendlyError(res.status));
+  return consumeSSE(res.body, onToken);
 }

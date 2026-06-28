@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconBack, IconMic, IconVolume, IconVolumeOff, IconSparkles } from "@/components/icons";
-import { streamClara, getKey, hasKey, DeepSeekError, type ChatMsg } from "@/lib/deepseek";
+import { streamClara, streamViaProxy, getKey, hasKey, DeepSeekError, type ChatMsg } from "@/lib/deepseek";
+import { CLARA_PROXY_URL } from "@/lib/config";
 import { detectIntent, localReply } from "@/lib/claraLocal";
 import { speak, stopSpeaking, isSpeechSupported } from "@/lib/voice";
 import { ClaraConnect } from "@/components/ClaraConnect";
@@ -39,7 +40,7 @@ export function ClaraScreen() {
   const autoSpeakRef = useRef(true);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setSmart(hasKey()); }, []);
+  useEffect(() => { setSmart(hasKey() || !!CLARA_PROXY_URL); }, []);
   useEffect(() => { autoSpeakRef.current = autoSpeak; }, [autoSpeak]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, streamText, pending]);
   useEffect(() => () => stopSpeaking(), []);
@@ -57,14 +58,18 @@ export function ClaraScreen() {
     setBusy(true);
     const intent = detectIntent(text);
 
-    if (hasKey()) {
+    const byok = hasKey();
+    if (byok || CLARA_PROXY_URL) {
       const hist: ChatMsg[] = [...historyRef.current, { role: "user", content: text }];
       historyRef.current = hist;
       setStreamText("");
       setPending(true);
       let full = "";
       try {
-        full = await streamClara(hist, getKey()!, (delta) => setStreamText((p) => p + delta));
+        const onTok = (delta: string) => setStreamText((p) => p + delta);
+        full = byok
+          ? await streamClara(hist, getKey()!, onTok)
+          : await streamViaProxy(CLARA_PROXY_URL, hist, onTok);
       } catch (e) {
         full = e instanceof DeepSeekError ? e.message : "Tive um probleminha para responder agora. Pode tentar de novo?";
       }
