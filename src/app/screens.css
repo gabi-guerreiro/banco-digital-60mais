@@ -59,9 +59,14 @@
 .home-name { font-family: var(--serif); font-size: var(--fs-xl); font-weight: 500; position: relative; z-index: 2; }
 .home-name em { font-style: italic; color: var(--rose); }
 .balance-card {
+  display: block; width: auto; text-align: left; font-family: var(--sans); border: none; cursor: pointer;
   margin: -16px 16px 0; background: var(--card); border-radius: 18px; padding: 18px 20px;
-  box-shadow: var(--sh-md); position: relative; z-index: 5;
+  box-shadow: var(--sh-md); position: relative; z-index: 5; transition: transform .18s var(--ease), box-shadow .18s var(--ease);
 }
+.balance-card:active { transform: scale(.99); }
+.balance-card:hover { box-shadow: var(--sh-lg); }
+.balance-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.balance-go { font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 500; color: var(--wine); letter-spacing: .04em; white-space: nowrap; }
 .balance-row { display: flex; align-items: center; justify-content: space-between; }
 .balance-label { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--muted); font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
 .balance-eye { background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; min-height: 30px; }
@@ -266,6 +271,70 @@
 .spec-wave i:nth-child(2){animation-delay:.12s} .spec-wave i:nth-child(3){animation-delay:.24s} .spec-wave i:nth-child(4){animation-delay:.36s} .spec-wave i:nth-child(5){animation-delay:.48s} .spec-wave i:nth-child(6){animation-delay:.6s}
 .spec-end { padding: 14px 28px; border: 2px solid var(--coral); border-radius: 99px; background: none; color: var(--coral); font-family: var(--sans); font-size: var(--fs-md); font-weight: 800; cursor: pointer; min-height: 52px; transition: all .2s var(--ease); }
 .spec-end:active { background: var(--coral); color: #fff; transform: scale(.97); }
+
+/* ── LIGAÇÃO simulada (atendente Ana Paula) ─────────── */
+.call { display: flex; flex-direction: column; height: 100%; padding: 16px 16px 18px; text-align: center; }
+.call-top { flex-shrink: 0; }
+.call-ring {
+  width: 76px; height: 76px; border-radius: 50%; margin: 6px auto 8px; border: 3px solid var(--green);
+  background: var(--green-bg); display: flex; align-items: center; justify-content: center;
+}
+.call-ring.ringing { animation: bioPulse 1.2s var(--ease-io) infinite; border-color: var(--wine-lt); }
+.call-ring.ringing svg { stroke: var(--wine); }
+.call-ring svg { width: 32px; height: 32px; stroke: var(--green); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.call-name { font-family: var(--serif); font-size: var(--fs-lg); color: var(--navy-deep); font-weight: 500; }
+.call-role { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--muted); letter-spacing: .06em; }
+.call-status { font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--green-dark); margin: 8px 0 6px; min-height: 15px; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.call-status .eqbars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.call-status .eqbars i { width: 2.5px; background: var(--green-dark); border-radius: 2px; animation: eq .8s ease-in-out infinite; }
+.call-status .eqbars i:nth-child(2){animation-delay:.15s} .call-status .eqbars i:nth-child(3){animation-delay:.3s}
+
+.call-captions { flex: 1; min-height: 0; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 6px 2px; }
+.call-cap { font-size: var(--fs-sm); line-height: 1.45; padding: 10px 13px; border-radius: 14px; max-width: 92%; animation: msgIn .3s var(--ease) both; }
+.call-cap-who { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; opacity: .7; display: block; margin-bottom: 3px; }
+.call-cap.ana { background: var(--green-bg); color: var(--ink); align-self: flex-start; border-bottom-left-radius: 4px; }
+.call-cap.user { background: var(--navy-deep); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.call-cap.typing { display: inline-flex; gap: 4px; align-items: center; }
+.call-cap.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: dotty 1.2s ease-in-out infinite; }
+.call-cap.typing i:nth-child(2){animation-delay:.2s} .call-cap.typing i:nth-child(3){animation-delay:.4s}
+
+.call-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
+.call-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.call-chip { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 8px 13px; font-family: var(--sans); font-size: var(--fs-xs); color: var(--green-dark); font-weight: 700; cursor: pointer; min-height: 38px; }
+.call-chip:active { transform: scale(.95); background: var(--green-bg); }
+.call-mic-row { display: flex; align-items: center; gap: 16px; }
+.call-mic { width: 70px; height: 70px; border-radius: 50%; background: var(--green); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(63,157,126,.42); transition: transform .15s var(--ease); }
+.call-mic.listening { background: var(--coral); animation: micPulse 1.1s var(--ease-io) infinite; }
+.call-mic:disabled { opacity: .5; }
+.call-mic:active { transform: scale(.94); }
+.call-mic svg { width: 30px; height: 30px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.call-mic-label { font-size: var(--fs-xs); color: var(--muted); }
+.call-end { width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--coral); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(208,95,106,.4); transition: transform .15s var(--ease); }
+.call-end:active { transform: scale(.92); }
+.call-end svg { width: 26px; height: 26px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transform: rotate(135deg); }
+
+/* ── Ações flutuantes (Ouvir esquerda · Ligar direita) ── */
+.float-btn {
+  position: absolute; bottom: 16px; z-index: 45;
+  display: inline-flex; align-items: center; gap: 8px; height: 52px; padding: 0 18px;
+  border-radius: 99px; border: 3px solid var(--paper); cursor: pointer;
+  font-family: var(--sans); font-weight: 800; font-size: var(--fs-sm); letter-spacing: .01em;
+  box-shadow: var(--sh-lg); transition: transform .2s var(--ease), bottom .25s var(--ease);
+}
+.float-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.float-btn:active { transform: scale(.95); }
+.float-btn.raised { bottom: 88px; }   /* acima da barra de digitação (Clara) */
+
+.float-ligar { right: 14px; background: var(--coral); color: #fff; }
+.float-ligar::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 99px;
+  border: 2px solid var(--coral); opacity: .5; animation: fabRing 2.4s var(--ease-io) infinite; pointer-events: none;
+}
+.float-ouvir { left: 14px; background: #fff; color: var(--wine); }
+.float-ouvir.speaking { background: var(--wine); color: #fff; }
+.float-ouvir .eqbars { display: inline-flex; gap: 2px; align-items: flex-end; height: 16px; }
+.float-ouvir .eqbars i { width: 3px; background: currentColor; border-radius: 2px; animation: eq .8s ease-in-out infinite; }
+.float-ouvir .eqbars i:nth-child(2){animation-delay:.15s} .float-ouvir .eqbars i:nth-child(3){animation-delay:.3s}
 
 /* ── CLARA · modo inteligente / voz / conexão ───────── */
 .clara-hdr-actions { display: flex; align-items: center; gap: 6px; }

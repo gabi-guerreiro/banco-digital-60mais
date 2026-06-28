@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "@/context/AppContext";
-import { primeVoices, unlockAudioOnce } from "@/lib/voice";
+import { primeVoices, unlockAudioOnce, speak } from "@/lib/voice";
 import { setKey } from "@/lib/deepseek";
 import { SysBar } from "@/components/SysBar";
 import { BottomNav } from "@/components/BottomNav";
-import { Fab } from "@/components/Fab";
+import { FloatingActions } from "@/components/FloatingActions";
 import { ClarezaTrigger, ClarezaSheet } from "@/components/ClarezaControl";
 import { SplashScreen } from "@/screens/SplashScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
@@ -48,6 +48,19 @@ function StageArt() {
 export function AppShell() {
   const { started, screen } = useApp();
   const [czOpen, setCzOpen] = useState(false);
+  const welcomed = useRef(false);
+
+  // Home "abre já falando": ao entrar, a Clara dá as boas-vindas em voz alta.
+  // O toque em "Entrar" (gesto) destrava o áudio, então o play funciona.
+  useEffect(() => {
+    if (started && !welcomed.current) {
+      welcomed.current = true;
+      const t = setTimeout(() => {
+        speak("Boa tarde, Maria Lúcia! Bem-vinda ao seu banco. Seu saldo é de quatro mil, duzentos e dezoito reais e cinquenta centavos. É só me dizer como posso ajudar, ou tocar no botão Ouvir a qualquer momento.");
+      }, 650);
+      return () => clearTimeout(t);
+    }
+  }, [started]);
 
   // Carrega as vozes do navegador cedo e destrava o áudio no 1º gesto (iOS).
   // Também importa a chave DeepSeek via fragmento privado (#k=sk-...) — o
@@ -95,10 +108,12 @@ export function AppShell() {
             {started ? <ActiveScreen /> : <SplashScreen />}
             {started && (
               <>
-                <div style={{ position: "absolute", top: 8, right: 12, zIndex: 46 }}>
-                  <ClarezaTrigger onOpen={() => setCzOpen(true)} />
-                </div>
-                {screen !== "specialist" && <Fab />}
+                {screen !== "clara" && (
+                  <div style={{ position: "absolute", top: 8, right: 12, zIndex: 46 }}>
+                    <ClarezaTrigger onOpen={() => setCzOpen(true)} />
+                  </div>
+                )}
+                <FloatingActions />
                 {czOpen && <ClarezaSheet onClose={() => setCzOpen(false)} />}
               </>
             )}

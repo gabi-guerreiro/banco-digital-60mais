@@ -139,11 +139,12 @@ export async function streamViaProxy(
   history: ChatMsg[],
   onToken: (delta: string) => void,
   signal?: AbortSignal,
+  persona?: "clara" | "atendente",
 ): Promise<string> {
   const res = await fetch(proxyUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: history }),
+    body: JSON.stringify(persona ? { messages: history, persona } : { messages: history }),
     signal,
   });
   if (!res.ok || !res.body) throw new DeepSeekError(res.status, friendlyError(res.status));

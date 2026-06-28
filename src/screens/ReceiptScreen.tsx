@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconSpeaker } from "@/components/icons";
 import { speak } from "@/lib/voice";
@@ -11,18 +11,25 @@ const CONFETTI = [
   { x: 280, c: "var(--rose)", d: 0.08 }, { x: 340, c: "var(--gold)", d: 0.18 },
 ];
 
+const RECEIPT_SPEAK =
+  "Pagamento realizado! Você pagou duzentos e oitenta e nove reais e quarenta centavos para a Eletropaulo, hoje, dez de junho, às catorze horas e trinta e dois minutos. O dinheiro saiu da sua conta. Protocolo: B R, 2026, 0610, 8892.";
+
 export function ReceiptScreen() {
-  const { resetTo } = useApp();
+  const { resetTo, setSpeakable } = useApp();
   const [played, setPlayed] = useState(false);
   const [saved, setSaved] = useState(false);
   const [shared, setShared] = useState(false);
 
+  // Confirma em voz alta automaticamente (momento crítico de confiança p/ 60+).
+  useEffect(() => {
+    setSpeakable(RECEIPT_SPEAK);
+    const t = setTimeout(() => { setPlayed(true); speak(RECEIPT_SPEAK, { rate: 0.9 }); }, 700);
+    return () => clearTimeout(t);
+  }, [setSpeakable]);
+
   function listen() {
     setPlayed(true);
-    speak(
-      "Você pagou duzentos e oitenta e nove reais e quarenta centavos para Eletropaulo hoje, dez de junho, às catorze horas e trinta e dois minutos. O dinheiro saiu da sua conta. Protocolo: B R, 2026, 0610, 8892.",
-      { rate: 0.9 },
-    );
+    speak(RECEIPT_SPEAK, { rate: 0.9 });
   }
 
   return (

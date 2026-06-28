@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import {
-  IconPay, IconChart, IconChat, IconMic, IconEye, IconEyeOff,
+  IconPay, IconChart, IconMic, IconEye, IconEyeOff,
   IconArrowRight, IconCart, IconPill, IconReceipt,
 } from "@/components/icons";
+
+const HOME_SPEAK =
+  "Boa tarde, Maria Lúcia. Seu saldo disponível é de quatro mil, duzentos e dezoito reais e cinquenta centavos, na conta corrente. Esta semana entraram dois mil e cem reais e saíram seiscentos e quarenta e sete reais. Para pagar uma conta, toque em Pagar. Para falar comigo, toque em Clara.";
 
 const QUICK = [
   { label: "Pagar", screen: "pay1" as const, icon: <IconPay size={21} /> },
@@ -21,7 +25,9 @@ const TX = [
 ];
 
 export function HomeScreen() {
-  const { navigate, balanceHidden, toggleBalance } = useApp();
+  const { navigate, balanceHidden, toggleBalance, setSpeakable } = useApp();
+
+  useEffect(() => { setSpeakable(HOME_SPEAK); }, [setSpeakable]);
 
   return (
     <div className="scroll">
@@ -38,19 +44,28 @@ export function HomeScreen() {
         </div>
       </div>
 
-      {/* Saldo */}
-      <div className="balance-card rise d2">
+      {/* Saldo — toca para abrir o extrato */}
+      <button className="balance-card rise d2" onClick={() => navigate("summary")} aria-label="Abrir extrato e detalhes do saldo">
         <div className="balance-row">
           <span className="balance-label">Saldo disponível</span>
-          <button className="balance-eye" onClick={toggleBalance} aria-label={balanceHidden ? "Mostrar saldo" : "Ocultar saldo"}>
+          <span
+            className="balance-eye"
+            role="button"
+            tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); toggleBalance(); }}
+            aria-label={balanceHidden ? "Mostrar saldo" : "Ocultar saldo"}
+          >
             {balanceHidden ? <IconEye size={19} /> : <IconEyeOff size={19} />}
-          </button>
+          </span>
         </div>
         <div className={`balance-value${balanceHidden ? " hidden" : ""}`}>
           {balanceHidden ? "R$ ••••••" : "R$ 4.218,50"}
         </div>
-        <div className="balance-sub">Conta corrente · Ag 0342 · CC 18745-9</div>
-      </div>
+        <div className="balance-foot">
+          <span className="balance-sub">Conta corrente · Ag 0342 · CC 18745-9</span>
+          <span className="balance-go">ver extrato →</span>
+        </div>
+      </button>
 
       {/* Ações rápidas */}
       <div className="quick">

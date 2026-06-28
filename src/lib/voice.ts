@@ -1,9 +1,10 @@
 // ════════════════════════════════════════════════
-// Voz — seleciona a melhor voz feminina pt-BR disponível
-// e fala com prosódia calorosa, mais lenta (público 60+).
-// Prioriza vozes neurais ("Natural"/"Online" da Microsoft,
-// "Google português do Brasil", "Luciana" da Apple).
+// Voz — voz neural pt-BR feminina via proxy (Google TTS),
+// que substitui a voz "robótica" do sistema. Cai para a melhor
+// voz local do navegador se a rede/proxy falhar.
 // ════════════════════════════════════════════════
+
+import { CLARA_TTS_URL } from "@/lib/config";
 
 const FEMALE = [
   "francisca", "thalita", "brenda", "giovanna", "leila", "manuela", "yara",
@@ -18,6 +19,8 @@ const MALE = [
 
 let cached: SpeechSynthesisVoice | null = null;
 let cachedName = "";
+let currentAudio: HTMLAudioElement | null = null;
+let unlockAudio: HTMLAudioElement | null = null;
 
 function score(v: SpeechSynthesisVoice): number {
   const name = (v.name || "").toLowerCase();
@@ -25,10 +28,10 @@ function score(v: SpeechSynthesisVoice): number {
   let s = -1;
   if (lang.startsWith("pt-br")) s = 100;
   else if (lang.startsWith("pt")) s = 55;
-  else return -1; // não é português
+  else return -1;
   if (FEMALE.some((f) => name.includes(f))) s += 60;
   if (MALE.some((m) => name.includes(m))) s -= 90;
-  if (name.includes("natural") || name.includes("online")) s += 55; // neural
+  if (name.includes("natural") || name.includes("online")) s += 55;
   if (name.includes("google")) s += 25;
   if (name.includes("microsoft")) s += 12;
   return s;
@@ -46,7 +49,6 @@ export function pickVoice(): SpeechSynthesisVoice | null {
   return best;
 }
 
-/** Carrega as vozes (assíncronas em alguns navegadores) e memoriza a melhor. */
 export function primeVoices(onReady?: (name: string) => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   const load = () => {
@@ -55,32 +57,28 @@ export function primeVoices(onReady?: (name: string) => void) {
   };
   load();
   window.speechSynthesis.onvoiceschanged = load;
-  // alguns navegadores precisam de um "empurrão"
   setTimeout(load, 300);
 }
 
 export function currentVoiceName(): string {
-  return cachedName || pickVoice()?.name || "";
+  return CLARA_TTS_URL ? "Google pt-BR (neural)" : (cachedName || pickVoice()?.name || "");
 }
 
 export function isSpeechSupported(): boolean {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
+  return typeof window !== "undefined" && ("speechSynthesis" in window || "Audio" in window);
 }
 
 type SpeakOpts = { rate?: number; pitch?: number; onStart?: () => void; onEnd?: () => void };
 
-/** Fala um texto com a melhor voz pt-BR feminina, em ritmo confortável. */
-export function speak(text: string, opts: SpeakOpts = {}) {
-  if (!isSpeechSupported()) { opts.onEnd?.(); return; }
+function speakBrowser(text: string, opts: SpeakOpts) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) { opts.onEnd?.(); return; }
   const synth = window.speechSynthesis;
   synth.cancel();
-  const clean = text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-  if (!clean) { opts.onEnd?.(); return; }
-  const u = new SpeechSynthesisUtterance(clean);
+  const u = new SpeechSynthesisUtterance(text);
   const v = cached || pickVoice();
   if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "pt-BR"; }
-  u.rate = opts.rate ?? 0.95;   // levemente mais lento: clareza para 60+
-  u.pitch = opts.pitch ?? 1.02; // leve calor
+  u.rate = opts.rate ?? 0.95;
+  u.pitch = opts.pitch ?? 1.02;
   u.volume = 1;
   u.onstart = () => opts.onStart?.();
   u.onend = () => opts.onEnd?.();
@@ -88,21 +86,71 @@ export function speak(text: string, opts: SpeakOpts = {}) {
   synth.speak(u);
 }
 
+async function speakNeural(text: string, opts: SpeakOpts): Promise<boolean> {
+  try {
+    const res = await fetch(`${CLARA_TTS_URL}?text=${encodeURIComponent(text)}`);
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    if (!blob.size) return false;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    let started = false;
+    audio.onplay = () => { started = true; opts.onStart?.(); };
+    audio.onended = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; opts.onEnd?.(); };
+    audio.onerror = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; if (started) opts.onEnd?.(); };
+    await audio.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Fala um texto com a melhor voz pt-BR feminina disponível. */
+export function speak(text: string, opts: SpeakOpts = {}) {
+  if (typeof window === "undefined") { opts.onEnd?.(); return; }
+  stopSpeaking();
+  const clean = text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  if (!clean) { opts.onEnd?.(); return; }
+  if (CLARA_TTS_URL) {
+    speakNeural(clean, opts).then((ok) => { if (!ok) speakBrowser(clean, opts); });
+  } else {
+    speakBrowser(clean, opts);
+  }
+}
+
 export function stopSpeaking() {
-  if (isSpeechSupported()) window.speechSynthesis.cancel();
+  if (typeof window === "undefined") return;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (currentAudio) {
+    try { currentAudio.pause(); currentAudio.src = ""; } catch {}
+    currentAudio = null;
+  }
 }
 
 /**
- * iOS/Safari só permite falar se a síntese for "destravada" dentro de um gesto
- * do usuário. Destrava no primeiro toque/tecla com uma fala silenciosa.
+ * Destrava o áudio no 1º gesto do usuário (iOS/Safari bloqueiam som fora de
+ * gesto). Destrava tanto a síntese do navegador quanto o elemento <audio>.
  */
 export function unlockAudioOnce() {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  if (typeof window === "undefined") return;
   const unlock = () => {
     try {
-      const u = new SpeechSynthesisUtterance(" ");
-      u.volume = 0;
-      window.speechSynthesis.speak(u);
+      if ("speechSynthesis" in window) {
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      }
+    } catch {}
+    try {
+      if (!unlockAudio) {
+        // mp3 silencioso minúsculo (data URI) para liberar o <audio> no iOS
+        unlockAudio = new Audio(
+          "data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA//////////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAJAQgAAgAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
+        );
+        unlockAudio.volume = 0;
+      }
+      unlockAudio.play().catch(() => {});
     } catch {}
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);

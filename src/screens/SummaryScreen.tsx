@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconBack } from "@/components/icons";
 
@@ -10,8 +11,13 @@ const CATS = [
   { label: "Outros", value: "58,00", color: "var(--faint)", pct: 8 },
 ];
 
+const SUMMARY_SPEAK =
+  "Resumo da semana. Entraram dois mil e cem reais da sua aposentadoria. Você gastou seiscentos e quarenta e sete reais e trinta centavos no total. Seu maior gasto foi com supermercado, trezentos e oitenta reais. Sobrou mil, quatrocentos e cinquenta e dois reais e setenta centavos — mais do que na semana passada.";
+
 export function SummaryScreen() {
-  const { back } = useApp();
+  const { back, setSpeakable } = useApp();
+
+  useEffect(() => { setSpeakable(SUMMARY_SPEAK); }, [setSpeakable]);
 
   return (
     <>

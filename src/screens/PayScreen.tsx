@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconBack, IconLock } from "@/components/icons";
 
+const PAY_SPEAK =
+  "Você está pagando a conta de luz da Eletropaulo, no valor de duzentos e oitenta e nove reais e quarenta centavos, que vence amanhã. Toque em Confirmar pagamento para continuar, ou em Cancelar se não quiser pagar.";
+
 export function PayScreen() {
-  const { back, navigate, resetTo } = useApp();
+  const { back, navigate, resetTo, setSpeakable } = useApp();
+
+  useEffect(() => { setSpeakable(PAY_SPEAK); }, [setSpeakable]);
 
   return (
     <>

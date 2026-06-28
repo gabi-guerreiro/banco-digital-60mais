@@ -29,6 +29,8 @@ type AppState = {
   setClareza: (level: number) => void;
   balanceHidden: boolean;
   toggleBalance: () => void;
+  speakable: string;
+  setSpeakable: (text: string) => void;
 };
 
 const AppContext = createContext<AppState | null>(null);
@@ -38,6 +40,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<ScreenId[]>(["home"]);
   const [clareza, setClarezaState] = useState(0);
   const [balanceHidden, setBalanceHidden] = useState(false);
+  const [speakable, setSpeakableState] = useState("");
 
   const screen = history[history.length - 1];
 
@@ -60,10 +63,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const resetTo = useCallback((target: ScreenId) => setHistory([target]), []);
   const setClareza = useCallback((level: number) => setClarezaState(level), []);
   const toggleBalance = useCallback(() => setBalanceHidden((v) => !v), []);
+  const setSpeakable = useCallback((text: string) => setSpeakableState(text), []);
 
   return (
     <AppContext.Provider
-      value={{ started, start, screen, navigate, back, resetTo, clareza, setClareza, balanceHidden, toggleBalance }}
+      value={{ started, start, screen, navigate, back, resetTo, clareza, setClareza, balanceHidden, toggleBalance, speakable, setSpeakable }}
     >
       {children}
     </AppContext.Provider>

@@ -4,10 +4,15 @@ import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconBack, IconLock } from "@/components/icons";
 
+const BIO_SPEAK =
+  "Confirme que é você para autorizar o pagamento de duzentos e oitenta e nove reais e quarenta centavos. Toque no círculo para usar o rosto ou a digital, ou digite seu PIN de quatro dígitos.";
+
 export function BiometricsScreen() {
-  const { back, navigate } = useApp();
+  const { back, navigate, setSpeakable } = useApp();
   const [pin, setPin] = useState<number[]>([]);
   const [scanning, setScanning] = useState(false);
+
+  useEffect(() => { setSpeakable(BIO_SPEAK); }, [setSpeakable]);
 
   // Navega ao completar 4 dígitos — robusto mesmo com toques rápidos.
   useEffect(() => {
