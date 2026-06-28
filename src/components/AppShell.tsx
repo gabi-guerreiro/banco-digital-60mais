@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { primeVoices, unlockAudioOnce } from "@/lib/voice";
+import { setKey } from "@/lib/deepseek";
 import { SysBar } from "@/components/SysBar";
 import { BottomNav } from "@/components/BottomNav";
 import { Fab } from "@/components/Fab";
@@ -49,7 +50,23 @@ export function AppShell() {
   const [czOpen, setCzOpen] = useState(false);
 
   // Carrega as vozes do navegador cedo e destrava o áudio no 1º gesto (iOS).
-  useEffect(() => { primeVoices(); unlockAudioOnce(); }, []);
+  // Também importa a chave DeepSeek via fragmento privado (#k=sk-...) — o
+  // fragmento NUNCA é enviado a servidor; a chave fica só no aparelho e a URL
+  // é limpa em seguida. Permite "pré-configurar" os próprios aparelhos por link.
+  useEffect(() => {
+    primeVoices();
+    unlockAudioOnce();
+    try {
+      const m = window.location.hash.match(/[#&](?:k|key|clara)=([^&]+)/);
+      if (m) {
+        const key = decodeURIComponent(m[1]).trim();
+        if (/^sk-/.test(key)) {
+          setKey(key);
+          window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      }
+    } catch {}
+  }, []);
 
   return (
     <div className="stage">
