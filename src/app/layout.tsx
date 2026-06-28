@@ -41,8 +41,7 @@ export const viewport: Viewport = {
   themeColor: "#2a081a",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Zoom liberado (pinch-to-zoom) — essencial para baixa visão / público 60+.
   viewportFit: "cover",
 };
 

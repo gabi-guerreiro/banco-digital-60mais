@@ -165,26 +165,33 @@ export function ClaraScreen() {
             </button>
           )}
 
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className={`msg ${m.role === "user" ? "user" : "bot"}`}
-              onClick={m.role === "bot" ? () => speak(m.text, { onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) }) : undefined}
-              title={m.role === "bot" ? "Tocar para ouvir" : undefined}
-              style={m.role === "bot" ? { cursor: "pointer" } : undefined}
-            >
-              {m.text}
-            </div>
-          ))}
+          {messages.map((m, i) => {
+            const isBot = m.role === "bot";
+            const listen = () => speak(m.text, { onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) });
+            return (
+              <div
+                key={i}
+                className={`msg ${isBot ? "bot" : "user"}`}
+                role={isBot ? "button" : undefined}
+                tabIndex={isBot ? 0 : undefined}
+                aria-label={isBot ? "Ouvir esta mensagem em voz alta" : undefined}
+                onClick={isBot ? listen : undefined}
+                onKeyDown={isBot ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); listen(); } } : undefined}
+                style={isBot ? { cursor: "pointer" } : undefined}
+              >
+                {m.text}
+              </div>
+            );
+          })}
 
           {pending && streamText === "" && (
-            <div className="msg bot typing"><i /><i /><i /></div>
+            <div className="msg bot typing" aria-hidden="true"><i /><i /><i /></div>
           )}
           {pending && streamText !== "" && (
             <div className="msg bot">{streamText}<span className="stream-caret" /></div>
           )}
           {speaking && (
-            <div className="speaking-hint"><span className="bars"><i /><i /><i /></span> Clara está falando…</div>
+            <div className="speaking-hint" role="status" aria-live="polite"><span className="bars" aria-hidden="true"><i /><i /><i /></span> Clara está falando…</div>
           )}
           <div ref={endRef} />
         </div>

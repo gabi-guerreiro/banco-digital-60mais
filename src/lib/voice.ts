@@ -2,6 +2,11 @@
 // Voz — voz neural pt-BR feminina via proxy (Google TTS),
 // que substitui a voz "robótica" do sistema. Cai para a melhor
 // voz local do navegador se a rede/proxy falhar.
+//
+// Robustez: cada fala tem um "gen" (geração). Trocar de tela ou
+// chamar stopSpeaking invalida falas em voo (fetch abortado, áudio
+// não toca, onEnd sempre dispara). Números/R$ são normalizados para
+// leitura compreensível.
 // ════════════════════════════════════════════════
 
 import { CLARA_TTS_URL } from "@/lib/config";
@@ -21,6 +26,26 @@ let cached: SpeechSynthesisVoice | null = null;
 let cachedName = "";
 let currentAudio: HTMLAudioElement | null = null;
 let unlockAudio: HTMLAudioElement | null = null;
+let currentAbort: AbortController | null = null;
+let currentOnEnd: (() => void) | null = null;
+let gen = 0;
+
+function fireOnEnd() {
+  const cb = currentOnEnd;
+  currentOnEnd = null;
+  if (cb) { try { cb(); } catch {} }
+}
+
+/** Normaliza R$, números e símbolos para leitura compreensível em pt-BR. */
+export function normalizeForSpeech(text: string): string {
+  return text
+    .replace(/R\$\s*([\d.]+),(\d{2})/g, (_m, int: string, c: string) => `${int.replace(/\./g, "")} reais e ${c} centavos`)
+    .replace(/R\$\s*([\d.]+)/g, (_m, int: string) => `${int.replace(/\./g, "")} reais`)
+    .replace(/(\d)\s*%/g, "$1 por cento")
+    .replace(/\s*[#*•]\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function score(v: SpeechSynthesisVoice): number {
   const name = (v.name || "").toLowerCase();
@@ -70,61 +95,80 @@ export function isSpeechSupported(): boolean {
 
 type SpeakOpts = { rate?: number; pitch?: number; onStart?: () => void; onEnd?: () => void };
 
-function speakBrowser(text: string, opts: SpeakOpts) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) { opts.onEnd?.(); return; }
+function speakBrowser(text: string, opts: SpeakOpts, myGen: number) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) { fireOnEnd(); return; }
   const synth = window.speechSynthesis;
-  synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const v = cached || pickVoice();
   if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "pt-BR"; }
   u.rate = opts.rate ?? 0.95;
   u.pitch = opts.pitch ?? 1.02;
   u.volume = 1;
-  u.onstart = () => opts.onStart?.();
-  u.onend = () => opts.onEnd?.();
-  u.onerror = () => opts.onEnd?.();
+  u.onstart = () => { if (gen === myGen) opts.onStart?.(); };
+  u.onend = () => { if (gen === myGen) fireOnEnd(); };
+  u.onerror = () => { if (gen === myGen) fireOnEnd(); };
   synth.speak(u);
 }
 
-async function speakNeural(text: string, opts: SpeakOpts): Promise<boolean> {
+async function speakNeural(text: string, opts: SpeakOpts, myGen: number, signal: AbortSignal): Promise<boolean> {
+  let url: string | null = null;
   try {
-    const res = await fetch(`${CLARA_TTS_URL}?text=${encodeURIComponent(text)}`);
+    const res = await fetch(`${CLARA_TTS_URL}?text=${encodeURIComponent(text)}`, { signal });
+    if (gen !== myGen) return true;          // substituído/cancelado: tratado
     if (!res.ok) return false;
     const blob = await res.blob();
+    if (gen !== myGen) return true;
     if (!blob.size) return false;
-    const url = URL.createObjectURL(blob);
+    url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    const cleanup = () => { if (url) { URL.revokeObjectURL(url); url = null; } if (currentAudio === audio) currentAudio = null; };
+    audio.onplay = () => { if (gen === myGen) opts.onStart?.(); };
+    audio.onended = () => { cleanup(); if (gen === myGen) fireOnEnd(); };
+    audio.onerror = () => { cleanup(); if (gen === myGen) fireOnEnd(); };
     currentAudio = audio;
-    let started = false;
-    audio.onplay = () => { started = true; opts.onStart?.(); };
-    audio.onended = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; opts.onEnd?.(); };
-    audio.onerror = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; if (started) opts.onEnd?.(); };
-    await audio.play();
+    try {
+      await audio.play();
+    } catch {
+      cleanup();
+      return false;                          // autoplay bloqueado -> fallback
+    }
     return true;
-  } catch {
+  } catch (e) {
+    if (url) { URL.revokeObjectURL(url); }
+    if ((e as { name?: string })?.name === "AbortError") return true;
     return false;
   }
+}
+
+/** Para qualquer fala em curso e desbloqueia quem dependia do onEnd. */
+export function stopSpeaking() {
+  if (typeof window === "undefined") return;
+  gen++;
+  if (currentAbort) { try { currentAbort.abort(); } catch {} currentAbort = null; }
+  if ("speechSynthesis" in window) { try { window.speechSynthesis.cancel(); } catch {} }
+  if (currentAudio) {
+    try { currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause(); currentAudio.src = ""; } catch {}
+    currentAudio = null;
+  }
+  fireOnEnd();
 }
 
 /** Fala um texto com a melhor voz pt-BR feminina disponível. */
 export function speak(text: string, opts: SpeakOpts = {}) {
   if (typeof window === "undefined") { opts.onEnd?.(); return; }
-  stopSpeaking();
-  const clean = text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  stopSpeaking();                            // cancela anterior (incrementa gen, dispara onEnd anterior)
+  const myGen = gen;
+  const clean = normalizeForSpeech(text.replace(/<[^>]+>/g, ""));
   if (!clean) { opts.onEnd?.(); return; }
+  currentOnEnd = opts.onEnd ?? null;
   if (CLARA_TTS_URL) {
-    speakNeural(clean, opts).then((ok) => { if (!ok) speakBrowser(clean, opts); });
+    const ac = new AbortController();
+    currentAbort = ac;
+    speakNeural(clean, opts, myGen, ac.signal).then((ok) => {
+      if (gen === myGen && !ok) speakBrowser(clean, opts, myGen);
+    });
   } else {
-    speakBrowser(clean, opts);
-  }
-}
-
-export function stopSpeaking() {
-  if (typeof window === "undefined") return;
-  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-  if (currentAudio) {
-    try { currentAudio.pause(); currentAudio.src = ""; } catch {}
-    currentAudio = null;
+    speakBrowser(clean, opts, myGen);
   }
 }
 
@@ -144,7 +188,6 @@ export function unlockAudioOnce() {
     } catch {}
     try {
       if (!unlockAudio) {
-        // mp3 silencioso minúsculo (data URI) para liberar o <audio> no iOS
         unlockAudio = new Audio(
           "data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA//////////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAJAQgAAgAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
         );

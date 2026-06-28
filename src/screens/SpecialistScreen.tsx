@@ -12,12 +12,8 @@ type Cap = { who: "ana" | "user"; text: string };
 type Phase = "calling" | "live";
 
 const GREETING = "Alô! Aqui é a Ana Paula, do atendimento do Banco 60+. Em que posso ajudar a senhora hoje?";
-
-const CHIPS = [
-  "Quero pagar minha conta de luz",
-  "O Pix é seguro?",
-  "Quanto tenho de saldo?",
-];
+const CHIPS = ["Quero pagar minha conta de luz", "O Pix é seguro?", "Quanto tenho de saldo?"];
+const HIST_CAP = 12;
 
 export function SpecialistScreen() {
   const { resetTo } = useApp();
@@ -27,23 +23,39 @@ export function SpecialistScreen() {
   const [listening, setListening] = useState(false);
   const [anaSpeaking, setAnaSpeaking] = useState(false);
   const [thinking, setThinking] = useState(false);
+
   const historyRef = useRef<ChatMsg[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const busy = thinking || listening;
+
+  // Limpeza total ao desmontar: para mic, fetch e voz.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      try { recRef.current?.abort?.(); } catch {}
+      try { abortRef.current?.abort(); } catch {}
+      stopSpeaking();
+    };
+  }, []);
 
   // Toca e atende: depois do "ringing", Ana Paula fala (voz) e abre a conversa.
   useEffect(() => {
     const t = setTimeout(() => {
+      if (!mountedRef.current) return;
       setPhase("live");
       setCaps([{ who: "ana", text: GREETING }]);
       historyRef.current = [{ role: "assistant", content: GREETING }];
       setAnaSpeaking(true);
-      speak(GREETING, { onEnd: () => setAnaSpeaking(false) });
+      speak(GREETING, { onEnd: () => { if (mountedRef.current) setAnaSpeaking(false); } });
     }, 2200);
     return () => clearTimeout(t);
   }, []);
 
-  // Cronômetro quando a ligação está ativa.
   useEffect(() => {
     if (phase !== "live") return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -51,7 +63,6 @@ export function SpecialistScreen() {
   }, [phase]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [caps, thinking]);
-  useEffect(() => () => stopSpeaking(), []);
 
   const ask = useCallback(async (text: string) => {
     const t = text.trim();
@@ -59,22 +70,24 @@ export function SpecialistScreen() {
     stopSpeaking();
     setAnaSpeaking(false);
     setCaps((c) => [...c, { who: "user", text: t }]);
-    const hist: ChatMsg[] = [...historyRef.current, { role: "user", content: t }];
-    historyRef.current = hist;
+    historyRef.current = [...historyRef.current, { role: "user" as const, content: t }].slice(-HIST_CAP);
     setThinking(true);
+    const ac = new AbortController();
+    abortRef.current = ac;
     let full = "";
     try {
-      if (CLARA_PROXY_URL) full = await streamViaProxy(CLARA_PROXY_URL, hist, () => {}, undefined, "atendente");
+      if (CLARA_PROXY_URL) full = await streamViaProxy(CLARA_PROXY_URL, historyRef.current, () => {}, ac.signal, "atendente");
       else full = localReply(t);
     } catch {
       full = "Desculpe, a ligação ficou ruim por um instante. Pode repetir, por favor?";
     }
+    if (!mountedRef.current || ac.signal.aborted) return; // desligou no meio
     setThinking(false);
     const reply = full || "Pode repetir, por favor?";
     setCaps((c) => [...c, { who: "ana", text: reply }]);
-    historyRef.current = [...historyRef.current, { role: "assistant", content: reply }];
+    historyRef.current = [...historyRef.current, { role: "assistant" as const, content: reply }].slice(-HIST_CAP);
     setAnaSpeaking(true);
-    speak(reply, { onEnd: () => setAnaSpeaking(false) });
+    speak(reply, { onEnd: () => { if (mountedRef.current) setAnaSpeaking(false); } });
   }, [busy]);
 
   function talk() {
@@ -90,20 +103,26 @@ export function SpecialistScreen() {
       return;
     }
     const rec = new SR();
+    recRef.current = rec;
     rec.lang = "pt-BR";
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-    rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
+    rec.onstart = () => { if (mountedRef.current) setListening(true); };
+    rec.onend = () => { if (mountedRef.current) setListening(false); };
     rec.onresult = (e: Event) => {
-      const r = e as unknown as { results: { [i: number]: { [j: number]: { transcript: string } } } };
-      ask(r.results[0][0].transcript);
+      if (!mountedRef.current) return;
+      const r = e as unknown as { results?: { [i: number]: { [j: number]: { transcript?: string } } } };
+      const txt = r.results?.[0]?.[0]?.transcript?.trim();
+      if (txt) ask(txt);
+      else setCaps((c) => [...c, { who: "ana", text: "Não consegui entender, pode repetir mais devagar?" }]);
     };
-    rec.onerror = () => setListening(false);
-    rec.start();
+    rec.onerror = () => { if (mountedRef.current) setListening(false); };
+    try { rec.start(); } catch { setListening(false); }
   }
 
   function hangUp() {
+    try { recRef.current?.abort?.(); } catch {}
+    try { abortRef.current?.abort(); } catch {}
     stopSpeaking();
     resetTo("home");
   }
@@ -133,8 +152,8 @@ export function SpecialistScreen() {
           </div>
           <div className="call-name">Ana Paula</div>
           <div className="call-role">Atendente 60+ · São Paulo {phase === "live" && `· ${mm}:${ss}`}</div>
-          <div className="call-status">
-            {(listening || anaSpeaking || thinking) && <span className="eqbars"><i /><i /><i /></span>}
+          <div className="call-status" role="status" aria-live="polite">
+            {(listening || anaSpeaking || thinking) && <span className="eqbars" aria-hidden="true"><i /><i /><i /></span>}
             {statusText}
           </div>
         </div>
@@ -146,12 +165,12 @@ export function SpecialistScreen() {
               {c.text}
             </div>
           ))}
-          {thinking && <div className="call-cap ana typing"><i /><i /><i /></div>}
+          {thinking && <div className="call-cap ana typing" aria-hidden="true"><i /><i /><i /></div>}
           <div ref={endRef} />
         </div>
 
         <div className="call-actions">
-          {phase === "live" && caps.length <= 1 && !busy && (
+          {phase === "live" && !busy && (
             <div className="call-chips">
               {CHIPS.map((c) => (
                 <button key={c} className="call-chip" onClick={() => ask(c)}>{c}</button>
@@ -161,7 +180,7 @@ export function SpecialistScreen() {
 
           {phase === "live" && (
             <span className="call-mic-label">
-              {listening ? "Pode falar…" : "Segure o assunto e toque para falar"}
+              {listening ? "Pode falar…" : "Toque no microfone para falar"}
             </span>
           )}
 

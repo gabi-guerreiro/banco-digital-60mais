@@ -45,18 +45,24 @@ export function HomeScreen() {
       </div>
 
       {/* Saldo — toca para abrir o extrato */}
-      <button className="balance-card rise d2" onClick={() => navigate("summary")} aria-label="Abrir extrato e detalhes do saldo">
+      <div
+        className="balance-card rise d2"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate("summary")}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("summary"); } }}
+        aria-label="Abrir extrato e detalhes do saldo"
+      >
         <div className="balance-row">
           <span className="balance-label">Saldo disponível</span>
-          <span
+          <button
+            type="button"
             className="balance-eye"
-            role="button"
-            tabIndex={0}
             onClick={(e) => { e.stopPropagation(); toggleBalance(); }}
             aria-label={balanceHidden ? "Mostrar saldo" : "Ocultar saldo"}
           >
-            {balanceHidden ? <IconEye size={19} /> : <IconEyeOff size={19} />}
-          </span>
+            {balanceHidden ? <IconEye size={21} /> : <IconEyeOff size={21} />}
+          </button>
         </div>
         <div className={`balance-value${balanceHidden ? " hidden" : ""}`}>
           {balanceHidden ? "R$ ••••••" : "R$ 4.218,50"}
@@ -65,7 +71,7 @@ export function HomeScreen() {
           <span className="balance-sub">Conta corrente · Ag 0342 · CC 18745-9</span>
           <span className="balance-go">ver extrato →</span>
         </div>
-      </button>
+      </div>
 
       {/* Ações rápidas */}
       <div className="quick">
