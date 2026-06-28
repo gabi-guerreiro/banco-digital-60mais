@@ -3,10 +3,13 @@
 // que substitui a voz "robótica" do sistema. Cai para a melhor
 // voz local do navegador se a rede/proxy falhar.
 //
-// Robustez: cada fala tem um "gen" (geração). Trocar de tela ou
-// chamar stopSpeaking invalida falas em voo (fetch abortado, áudio
-// não toca, onEnd sempre dispara). Números/R$ são normalizados para
-// leitura compreensível.
+// Robustez:
+// - cada fala tem um "gen"; trocar de tela / stopSpeaking invalida falas
+//   em voo (fetch abortado, áudio não toca, onEnd sempre dispara);
+// - usa UM <audio> persistente, destravado no 1º gesto, para a voz neural
+//   tocar mesmo fora de gesto no iOS (welcome, respostas da Clara/atendente);
+// - timeout no fetch do TTS → cai para a voz do navegador;
+// - normaliza R$/números para leitura compreensível.
 // ════════════════════════════════════════════════
 
 import { CLARA_TTS_URL } from "@/lib/config";
@@ -22,13 +25,26 @@ const MALE = [
   "valério", "valerio", "ricardo", "joaquim", "duarte",
 ];
 
+const SILENT_MP3 =
+  "data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA//////////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAJAQgAAgAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+
 let cached: SpeechSynthesisVoice | null = null;
 let cachedName = "";
-let currentAudio: HTMLAudioElement | null = null;
-let unlockAudio: HTMLAudioElement | null = null;
+let player: HTMLAudioElement | null = null;   // <audio> persistente (destravado no 1º gesto)
+let currentBlobUrl: string | null = null;
 let currentAbort: AbortController | null = null;
 let currentOnEnd: (() => void) | null = null;
 let gen = 0;
+
+function getPlayer(): HTMLAudioElement | null {
+  if (typeof window === "undefined" || typeof Audio === "undefined") return null;
+  if (!player) player = new Audio();
+  return player;
+}
+
+function revokeBlob() {
+  if (currentBlobUrl) { try { URL.revokeObjectURL(currentBlobUrl); } catch {} currentBlobUrl = null; }
+}
 
 function fireOnEnd() {
   const cb = currentOnEnd;
@@ -110,32 +126,39 @@ function speakBrowser(text: string, opts: SpeakOpts, myGen: number) {
   synth.speak(u);
 }
 
-async function speakNeural(text: string, opts: SpeakOpts, myGen: number, signal: AbortSignal): Promise<boolean> {
-  let url: string | null = null;
+async function speakNeural(text: string, opts: SpeakOpts, myGen: number, ac: AbortController): Promise<boolean> {
+  const p = getPlayer();
+  if (!p) return false;
+  // timeout: se o proxy demorar, aborta e cai para a voz do navegador.
+  const to = setTimeout(() => { try { ac.abort(); } catch {} }, 9000);
   try {
-    const res = await fetch(`${CLARA_TTS_URL}?text=${encodeURIComponent(text)}`, { signal });
-    if (gen !== myGen) return true;          // substituído/cancelado: tratado
+    const res = await fetch(`${CLARA_TTS_URL}?text=${encodeURIComponent(text)}`, { signal: ac.signal });
+    clearTimeout(to);
+    if (gen !== myGen) return true;                 // substituído por nova fala / parado pelo usuário
     if (!res.ok) return false;
     const blob = await res.blob();
     if (gen !== myGen) return true;
     if (!blob.size) return false;
-    url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    const cleanup = () => { if (url) { URL.revokeObjectURL(url); url = null; } if (currentAudio === audio) currentAudio = null; };
-    audio.onplay = () => { if (gen === myGen) opts.onStart?.(); };
-    audio.onended = () => { cleanup(); if (gen === myGen) fireOnEnd(); };
-    audio.onerror = () => { cleanup(); if (gen === myGen) fireOnEnd(); };
-    currentAudio = audio;
+
+    revokeBlob();
+    currentBlobUrl = URL.createObjectURL(blob);
+    p.muted = false;   // garante que não toque mudo após o desbloqueio silencioso
+    p.onplay = () => { if (gen === myGen) opts.onStart?.(); };
+    p.onended = () => { if (gen === myGen) { revokeBlob(); fireOnEnd(); } };
+    p.onerror = () => { if (gen === myGen) { revokeBlob(); fireOnEnd(); } };
+    p.src = currentBlobUrl;
     try {
-      await audio.play();
+      await p.play();
     } catch {
-      cleanup();
-      return false;                          // autoplay bloqueado -> fallback
+      revokeBlob();
+      return false;                                  // autoplay bloqueado → fallback
     }
     return true;
   } catch (e) {
-    if (url) { URL.revokeObjectURL(url); }
-    if ((e as { name?: string })?.name === "AbortError") return true;
+    clearTimeout(to);
+    revokeBlob();
+    if (gen !== myGen) return true;                  // parado pelo usuário (gen mudou)
+    if ((e as { name?: string })?.name === "AbortError") return false; // timeout → fallback
     return false;
   }
 }
@@ -146,17 +169,17 @@ export function stopSpeaking() {
   gen++;
   if (currentAbort) { try { currentAbort.abort(); } catch {} currentAbort = null; }
   if ("speechSynthesis" in window) { try { window.speechSynthesis.cancel(); } catch {} }
-  if (currentAudio) {
-    try { currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause(); currentAudio.src = ""; } catch {}
-    currentAudio = null;
+  if (player) {
+    try { player.onended = null; player.onerror = null; player.onplay = null; player.pause(); player.removeAttribute("src"); player.load(); } catch {}
   }
+  revokeBlob();
   fireOnEnd();
 }
 
 /** Fala um texto com a melhor voz pt-BR feminina disponível. */
 export function speak(text: string, opts: SpeakOpts = {}) {
   if (typeof window === "undefined") { opts.onEnd?.(); return; }
-  stopSpeaking();                            // cancela anterior (incrementa gen, dispara onEnd anterior)
+  stopSpeaking();                                    // cancela anterior (gen++ + onEnd anterior)
   const myGen = gen;
   const clean = normalizeForSpeech(text.replace(/<[^>]+>/g, ""));
   if (!clean) { opts.onEnd?.(); return; }
@@ -164,7 +187,7 @@ export function speak(text: string, opts: SpeakOpts = {}) {
   if (CLARA_TTS_URL) {
     const ac = new AbortController();
     currentAbort = ac;
-    speakNeural(clean, opts, myGen, ac.signal).then((ok) => {
+    speakNeural(clean, opts, myGen, ac).then((ok) => {
       if (gen === myGen && !ok) speakBrowser(clean, opts, myGen);
     });
   } else {
@@ -174,7 +197,8 @@ export function speak(text: string, opts: SpeakOpts = {}) {
 
 /**
  * Destrava o áudio no 1º gesto do usuário (iOS/Safari bloqueiam som fora de
- * gesto). Destrava tanto a síntese do navegador quanto o elemento <audio>.
+ * gesto). Destrava a síntese do navegador E o <audio> persistente da voz
+ * neural — assim a fala neural toca mesmo fora de gesto depois (welcome etc.).
  */
 export function unlockAudioOnce() {
   if (typeof window === "undefined") return;
@@ -187,13 +211,13 @@ export function unlockAudioOnce() {
       }
     } catch {}
     try {
-      if (!unlockAudio) {
-        unlockAudio = new Audio(
-          "data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA//////////////////////////////////////////////8AAAA8TEFNRTMuMTAwAc0AAAAAAAAAABSAJAJAQgAAgAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxAADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
-        );
-        unlockAudio.volume = 0;
+      const p = getPlayer();
+      if (p) {
+        p.muted = true;
+        p.src = SILENT_MP3;
+        const done = () => { p.muted = false; };
+        p.play().then(done).catch(done);
       }
-      unlockAudio.play().catch(() => {});
     } catch {}
     window.removeEventListener("pointerdown", unlock);
     window.removeEventListener("keydown", unlock);

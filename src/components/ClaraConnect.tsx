@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getKey, setKey, clearKey, validateKey } from "@/lib/deepseek";
 import { IconSparkles, IconShield } from "@/components/icons";
 
@@ -15,6 +15,12 @@ export function ClaraConnect({
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
   const connected = !!getKey();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function testAndSave() {
     const key = value.trim();
@@ -41,7 +47,7 @@ export function ClaraConnect({
 
   return (
     <div className="cz-sheet-bg" onClick={onClose}>
-      <div className="cz-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="cz-sheet" role="dialog" aria-modal="true" aria-label="Conectar Clara Inteligente" onClick={(e) => e.stopPropagation()}>
         <div className="cz-grip" />
         <div className="connect-eyebrow"><IconSparkles size={14} /> Clara Inteligente · DeepSeek</div>
         <h3>Dê um <em>cérebro de verdade</em> à Clara</h3>

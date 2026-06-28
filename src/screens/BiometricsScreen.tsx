@@ -50,11 +50,12 @@ export function BiometricsScreen() {
 
           <div className="bio-or">— ou use seu PIN —</div>
 
-          <div className="bio-dots">
+          <div className="bio-dots" aria-hidden="true">
             {[0, 1, 2, 3].map((i) => (
               <span key={i} className={`bio-dot${i < pin.length ? " fill" : ""}`} />
             ))}
           </div>
+          <div className="sr-only" role="status" aria-live="polite">{pin.length} de 4 dígitos inseridos</div>
 
           <div className="pad-grid">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (

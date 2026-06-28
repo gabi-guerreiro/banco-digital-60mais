@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useApp, CLAREZA_LEVELS } from "@/context/AppContext";
 import { IconText, IconCheck } from "@/components/icons";
 
@@ -15,10 +16,18 @@ export function ClarezaTrigger({ onOpen }: { onOpen: () => void }) {
 
 export function ClarezaSheet({ onClose }: { onClose: () => void }) {
   const { clareza, setClareza } = useApp();
+  const doneRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    doneRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <div className="cz-sheet-bg" onClick={onClose}>
-      <div className="cz-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="cz-sheet" role="dialog" aria-modal="true" aria-label="Modo Clareza" onClick={(e) => e.stopPropagation()}>
         <div className="cz-grip" />
         <h3>Modo <em>Clareza</em></h3>
         <p className="cz-sub">Escolha o tamanho do texto que for mais confortável para você. Tudo no app se ajusta na hora.</p>
@@ -39,7 +48,7 @@ export function ClarezaSheet({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        <button className="cz-done" onClick={onClose}>Pronto</button>
+        <button ref={doneRef} className="cz-done" onClick={onClose}>Pronto</button>
       </div>
     </div>
   );
