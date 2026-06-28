@@ -39,3 +39,9 @@ export const IconCart = wrap(<><circle cx="9" cy="20" r="1.4" /><circle cx="18" 
 export const IconPill = wrap(<><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(45 12 12)" /><path d="m9 9 6 6" /></>);
 export const IconReceipt = wrap(<><path d="M5 3v18l2-1.4 2 1.4 2-1.4 2 1.4 2-1.4 2 1.4V3l-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4Z" /><path d="M8 8h8M8 12h8" /></>);
 export const IconWifi = wrap(<><path d="M2 8.5a16 16 0 0 1 20 0" /><path d="M5 12a11 11 0 0 1 14 0" /><path d="M8.5 15.5a6 6 0 0 1 7 0" /><path d="M12 19h0" /></>);
+export const IconSparkles = wrap(<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /><path d="M19 14l.7 1.9L21.6 16.6 19.7 17.3 19 19.2 18.3 17.3 16.4 16.6 18.3 15.9 19 14Z" /></>);
+export const IconVolume = wrap(<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M16 9a4 4 0 0 1 0 6" /><path d="M19 6a8 8 0 0 1 0 12" /></>);
+export const IconVolumeOff = wrap(<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="m23 9-6 6" /><path d="m17 9 6 6" /></>);
+export const IconStop = wrap(<rect x="6" y="6" width="12" height="12" rx="2" />);
+export const IconKey = wrap(<><circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.5 12.5 8-8" /><path d="m16 4.5 3 3" /><path d="m13.5 7 3 3" /></>);
+export const IconSend = wrap(<><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></>);

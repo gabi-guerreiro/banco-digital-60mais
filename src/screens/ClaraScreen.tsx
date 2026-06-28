@@ -1,62 +1,91 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
-import { IconBack, IconMic } from "@/components/icons";
+import { IconBack, IconMic, IconVolume, IconVolumeOff, IconSparkles } from "@/components/icons";
+import { streamClara, getKey, hasKey, DeepSeekError, type ChatMsg } from "@/lib/deepseek";
+import { detectIntent, localReply } from "@/lib/claraLocal";
+import { speak, stopSpeaking, isSpeechSupported } from "@/lib/voice";
+import { ClaraConnect } from "@/components/ClaraConnect";
 
-type Message = { role: "bot" | "user" | "typing"; text: string };
-
-const KNOWLEDGE: { triggers: string[]; response: string; go?: "pay1" | "summary" | "specialist" }[] = [
-  { triggers: ["paga", "conta", "luz", "boleto", "eletro"], response: "Encontrei sua conta de luz da <b>Eletropaulo</b>, no valor de R$ 289,40 — vence amanhã. Quer que eu prepare o pagamento para você confirmar?" },
-  { triggers: ["sim", "quero", "pode", "faz", "confirma", "manda", "prepara", "isso"], response: "Pronto! Preparei o pagamento. Vou te mostrar o resumo em linguagem simples para você revisar antes de confirmar.", go: "pay1" },
-  { triggers: ["saldo", "quanto", "tenho", "sobrou", "dinheiro"], response: "Seu saldo é <b>R$ 4.218,50</b> na conta corrente (Agência 0342). Quer que eu mostre o resumo da semana?" },
-  { triggers: ["extrato", "resumo", "semana", "gastei", "entrou", "gasto"], response: "Na última semana entraram <b>R$ 2.100</b> da aposentadoria e saíram <b>R$ 647,30</b>. Seu maior gasto foi com supermercado. Vou te mostrar o resumo completo.", go: "summary" },
-  { triggers: ["pessoa", "humano", "atendente", "especialista", "ligar", "falar", "alguém"], response: "Vou te conectar com uma especialista da nossa equipe 60+. Ela já vai ter todo o contexto da nossa conversa. Um momento…", go: "specialist" },
-  { triggers: ["segur", "golpe", "fraude", "perig", "pix é"], response: "<b>Pix é seguro</b> quando você faz pelo app do banco. Nunca faça Pix pedido por mensagem, telefone ou link suspeito. Na dúvida, me chame ou fale com uma especialista." },
-  { triggers: ["ajuda", "consigo", "difícil", "como", "não sei"], response: "Sem problema! Posso te ajudar com <b>pagamentos</b>, <b>transferências</b>, ver seu <b>saldo</b> ou <b>extrato</b>, ou ligar para uma <b>especialista</b>. O que você prefere?" },
-  { triggers: ["obrigad", "valeu", "agradeç", "ótimo", "perfeito"], response: "De nada, Maria Lúcia! Estou sempre aqui. Se precisar de qualquer coisa, é só me chamar. 💛" },
-];
-
-function match(text: string) {
-  const lower = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  return KNOWLEDGE.find((k) => k.triggers.some((t) => lower.includes(t)));
-}
+type Msg = { role: "user" | "bot"; text: string };
 
 const CHIPS = [
-  { label: "Pagar conta de luz", msg: "Paga minha conta de luz" },
-  { label: "Ver meu saldo", msg: "Quanto tenho de saldo?" },
+  { label: "Pagar conta de luz", msg: "Pode pagar minha conta de luz?" },
+  { label: "Ver meu saldo", msg: "Quanto eu tenho de saldo?" },
   { label: "Resumo da semana", msg: "Me mostra o resumo da semana" },
-  { label: "Falar com pessoa", msg: "Quero falar com uma pessoa" },
+  { label: "Falar com pessoa", msg: "Quero falar com uma atendente" },
   { label: "Pix é seguro?", msg: "O Pix é seguro?" },
 ];
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export function ClaraScreen() {
   const { back, navigate } = useApp();
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "bot", text: "<b>Olá, Maria Lúcia!</b> Como posso te ajudar? Você pode falar ou digitar." },
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "bot", text: "Olá, Maria Lúcia! Sou a Clara. Pode falar ou escrever — me diga como posso ajudar hoje." },
   ]);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [streamText, setStreamText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [smart, setSmart] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+
+  const historyRef = useRef<ChatMsg[]>([]);
+  const autoSpeakRef = useRef(true);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { setSmart(hasKey()); }, []);
+  useEffect(() => { autoSpeakRef.current = autoSpeak; }, [autoSpeak]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, streamText, pending]);
+  useEffect(() => () => stopSpeaking(), []);
 
-  function botReply(text: string) {
-    setMessages((m) => [...m, { role: "typing", text: "" }]);
-    setTimeout(() => {
-      const hit = match(text);
-      const reply = hit?.response ?? "Não entendi muito bem. Pode dizer de outro jeito? Posso ajudar com <b>pagamentos</b>, <b>saldo</b>, <b>extrato</b> ou chamar uma <b>especialista</b>.";
-      setMessages((m) => [...m.filter((x) => x.role !== "typing"), { role: "bot", text: reply }]);
-      if (hit?.go) setTimeout(() => navigate(hit.go!), 1500);
-    }, 850);
-  }
+  const speakReply = useCallback((text: string) => {
+    if (!autoSpeakRef.current || !isSpeechSupported()) return;
+    speak(text, { onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) });
+  }, []);
 
-  function send(text: string) {
-    if (!text.trim()) return;
-    setMessages((m) => [...m, { role: "user", text }]);
+  const send = useCallback(async (raw: string) => {
+    const text = raw.trim();
+    if (!text || busy) return;
     setInput("");
-    botReply(text);
-  }
+    setMessages((m) => [...m, { role: "user", text }]);
+    setBusy(true);
+    const intent = detectIntent(text);
+
+    if (hasKey()) {
+      const hist: ChatMsg[] = [...historyRef.current, { role: "user", content: text }];
+      historyRef.current = hist;
+      setStreamText("");
+      setPending(true);
+      let full = "";
+      try {
+        full = await streamClara(hist, getKey()!, (delta) => setStreamText((p) => p + delta));
+      } catch (e) {
+        full = e instanceof DeepSeekError ? e.message : "Tive um probleminha para responder agora. Pode tentar de novo?";
+      }
+      setPending(false);
+      setStreamText("");
+      const reply = full || "Desculpe, não consegui responder agora.";
+      setMessages((m) => [...m, { role: "bot", text: reply }]);
+      historyRef.current = [...historyRef.current, { role: "assistant", content: reply }];
+      speakReply(reply);
+    } else {
+      setPending(true);
+      await sleep(650);
+      const reply = localReply(text);
+      setPending(false);
+      setMessages((m) => [...m, { role: "bot", text: reply }]);
+      speakReply(reply);
+    }
+
+    setBusy(false);
+    if (intent) setTimeout(() => navigate(intent), 1700);
+  }, [busy, navigate, speakReply]);
 
   function voice() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,39 +93,93 @@ export function ClaraScreen() {
     const w = window as W;
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) {
-      setMessages((m) => [...m, { role: "bot", text: "O reconhecimento de voz não está disponível neste navegador. Pode digitar sua mensagem. 🙂" }]);
+      setMessages((m) => [...m, { role: "bot", text: "Este navegador não permite ouvir pelo microfone. Pode escrever pra mim aqui embaixo. 🙂" }]);
       return;
     }
+    stopSpeaking();
     const rec = new SR();
     rec.lang = "pt-BR";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
     rec.onstart = () => setListening(true);
     rec.onend = () => setListening(false);
     rec.onresult = (e: Event) => {
       const r = e as unknown as { results: { [i: number]: { [j: number]: { transcript: string } } } };
       send(r.results[0][0].transcript);
     };
-    rec.onerror = () => { setListening(false); setMessages((m) => [...m, { role: "bot", text: "Não consegui ouvir. Tenta de novo ou digita pra mim." }]); };
+    rec.onerror = () => setListening(false);
     rec.start();
   }
 
-  const firstTurn = messages.filter((m) => m.role !== "typing").length <= 1;
+  function toggleSpeak() {
+    setAutoSpeak((v) => {
+      const next = !v;
+      if (!next) { stopSpeaking(); setSpeaking(false); }
+      return next;
+    });
+  }
+
+  function onConnected(connected: boolean) {
+    setSmart(connected);
+    if (connected) {
+      const msg = "Pronto! Agora eu entendo você de verdade. Pode me perguntar o que quiser. 💛";
+      setMessages((m) => [...m, { role: "bot", text: msg }]);
+      speakReply(msg);
+    }
+  }
+
+  const firstTurn = messages.length <= 1;
 
   return (
     <>
       <div className="topbar">
         <button className="iconbtn" onClick={back}><IconBack size={16} /> Voltar</button>
-        <div className="topbar-title"><em>Clara</em> · assistente</div>
-        <div className="topbar-spacer" />
+        <div className="topbar-title">
+          <em>Clara</em>{" "}
+          {smart && <span className="smart-pill"><IconSparkles size={10} /> IA</span>}
+        </div>
+        <div className="clara-hdr-actions">
+          <button className={`clara-hdr-btn${autoSpeak ? " on" : ""}`} onClick={toggleSpeak} aria-label={autoSpeak ? "Desligar voz" : "Ligar voz"}>
+            {autoSpeak ? <IconVolume size={17} /> : <IconVolumeOff size={17} />}
+          </button>
+          <button className="clara-hdr-btn" onClick={() => setConnectOpen(true)} aria-label="Conectar Clara Inteligente">
+            <IconSparkles size={17} />
+          </button>
+        </div>
       </div>
 
       <div className="clara">
         <div className="clara-msgs">
-          {messages.map((m, i) =>
-            m.role === "typing" ? (
-              <div key={i} className="msg bot typing"><i /><i /><i /></div>
-            ) : (
-              <div key={i} className={`msg ${m.role}`} dangerouslySetInnerHTML={{ __html: m.text }} />
-            )
+          {!smart && (
+            <button className="clara-banner" onClick={() => setConnectOpen(true)}>
+              <span className="clara-banner-ic"><IconSparkles size={20} /></span>
+              <span className="clara-banner-tx">
+                <strong>Ativar Clara Inteligente</strong>
+                <span>Conecte a DeepSeek e converse livremente, por voz. Sua chave fica só no aparelho.</span>
+              </span>
+            </button>
+          )}
+
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className={`msg ${m.role === "user" ? "user" : "bot"}`}
+              onClick={m.role === "bot" ? () => speak(m.text, { onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) }) : undefined}
+              title={m.role === "bot" ? "Tocar para ouvir" : undefined}
+              style={m.role === "bot" ? { cursor: "pointer" } : undefined}
+            >
+              {m.text}
+            </div>
+          ))}
+
+          {pending && streamText === "" && (
+            <div className="msg bot typing"><i /><i /><i /></div>
+          )}
+          {pending && streamText !== "" && (
+            <div className="msg bot">{streamText}<span className="stream-caret" /></div>
+          )}
+          {speaking && (
+            <div className="speaking-hint"><span className="bars"><i /><i /><i /></span> Clara está falando…</div>
           )}
           <div ref={endRef} />
         </div>
@@ -115,13 +198,16 @@ export function ClaraScreen() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") send(input); }}
-            placeholder="Escreva ou toque no microfone…"
+            placeholder={smart ? "Pergunte qualquer coisa…" : "Escreva ou toque no microfone…"}
+            disabled={busy}
           />
           <button className={`mic${listening ? " live" : ""}`} onClick={voice} aria-label="Falar com a Clara">
             <IconMic size={20} />
           </button>
         </div>
       </div>
+
+      {connectOpen && <ClaraConnect onClose={() => setConnectOpen(false)} onChange={onConnected} />}
     </>
   );
 }

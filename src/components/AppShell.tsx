@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
+import { primeVoices, unlockAudioOnce } from "@/lib/voice";
 import { SysBar } from "@/components/SysBar";
 import { BottomNav } from "@/components/BottomNav";
 import { Fab } from "@/components/Fab";
@@ -46,6 +47,9 @@ function StageArt() {
 export function AppShell() {
   const { started, screen } = useApp();
   const [czOpen, setCzOpen] = useState(false);
+
+  // Carrega as vozes do navegador cedo e destrava o áudio no 1º gesto (iOS).
+  useEffect(() => { primeVoices(); unlockAudioOnce(); }, []);
 
   return (
     <div className="stage">

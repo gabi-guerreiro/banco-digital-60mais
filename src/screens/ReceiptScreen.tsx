@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { IconSpeaker } from "@/components/icons";
+import { speak } from "@/lib/voice";
 
 const CONFETTI = [
   { x: 30, c: "var(--rose)", d: 0 }, { x: 90, c: "var(--gold)", d: 0.1 },
@@ -18,14 +19,10 @@ export function ReceiptScreen() {
 
   function listen() {
     setPlayed(true);
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(
-      "Você pagou duzentos e oitenta e nove reais e quarenta centavos para Eletropaulo hoje, dez de junho, às catorze horas e trinta e dois minutos. O dinheiro saiu da sua conta. Protocolo B R 2026 0610 8892."
+    speak(
+      "Você pagou duzentos e oitenta e nove reais e quarenta centavos para Eletropaulo hoje, dez de junho, às catorze horas e trinta e dois minutos. O dinheiro saiu da sua conta. Protocolo: B R, 2026, 0610, 8892.",
+      { rate: 0.9 },
     );
-    u.lang = "pt-BR";
-    u.rate = 0.86;
-    window.speechSynthesis.speak(u);
   }
 
   return (
