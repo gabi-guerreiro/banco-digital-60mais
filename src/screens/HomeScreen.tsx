@@ -1,93 +1,101 @@
 "use client";
 
 import { useApp } from "@/context/AppContext";
-import { SpecialistFAB } from "@/components/SpecialistFAB";
+import {
+  IconPay, IconChart, IconChat, IconMic, IconEye, IconEyeOff,
+  IconArrowRight, IconCart, IconPill, IconReceipt,
+} from "@/components/icons";
+
+const QUICK = [
+  { label: "Pagar", screen: "pay1" as const, icon: <IconPay size={21} /> },
+  { label: "Pix", screen: "pay1" as const, icon: <IconArrowRight size={21} /> },
+  { label: "Extrato", screen: "summary" as const, icon: <IconChart size={21} /> },
+  { label: "Clara", screen: "clara" as const, icon: <IconMic size={21} /> },
+];
+
+const TX = [
+  { name: "Aposentadoria · INSS", date: "10 jun · 09:12", val: "+ 2.100,00", dir: "in" as const, icon: <IconArrowRight size={18} />, bg: "var(--green-bg)", st: "var(--green-dark)" },
+  { name: "Supermercado Pão de Açúcar", date: "08 jun · 17:40", val: "− 380,00", dir: "out" as const, icon: <IconCart size={18} />, bg: "var(--paper-2)", st: "var(--wine)" },
+  { name: "Farmácia São Paulo", date: "06 jun · 11:05", val: "− 127,30", dir: "out" as const, icon: <IconPill size={18} />, bg: "var(--paper-2)", st: "var(--wine)" },
+  { name: "Conta de luz · Eletropaulo", date: "04 jun · 08:30", val: "− 264,10", dir: "out" as const, icon: <IconReceipt size={18} />, bg: "var(--paper-2)", st: "var(--wine)" },
+];
 
 export function HomeScreen() {
-  const { navigate } = useApp();
+  const { navigate, balanceHidden, toggleBalance } = useApp();
 
   return (
-    <div className="screen-fade" style={{ position: "absolute", inset: 0, top: 44, overflowY: "auto", background: "#f8f6f4" }}>
-
-      {/* Greeting header */}
-      <div style={{ padding: "18px 18px 10px", background: "linear-gradient(135deg, var(--navy-deep), var(--navy))", color: "white" }}>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginBottom: 2 }}>Boa tarde,</div>
-        <div className="font-serif" style={{ fontSize: 20, fontWeight: 500 }}>
-          <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Maria Lúcia</em>
+    <div className="scroll">
+      {/* Hero */}
+      <div className="home-hero">
+        <svg className="home-hero-art" viewBox="0 0 200 200" aria-hidden="true">
+          {[40, 70, 100].map((r) => (
+            <circle key={r} cx="140" cy="60" r={r} fill="none" stroke="#e8a0b4" strokeOpacity="0.25" />
+          ))}
+        </svg>
+        <div className="home-greet rise">Boa tarde,</div>
+        <div className="home-name rise d1">
+          <em>Maria Lúcia</em>
         </div>
       </div>
 
-      {/* Saldo card */}
-      <div style={{ margin: "-4px 16px 0", background: "white", borderRadius: 12, padding: "16px 18px", boxShadow: "0 4px 16px rgba(58,14,32,.08)", position: "relative", zIndex: 5 }}>
-        <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>
-          Saldo Disponível
+      {/* Saldo */}
+      <div className="balance-card rise d2">
+        <div className="balance-row">
+          <span className="balance-label">Saldo disponível</span>
+          <button className="balance-eye" onClick={toggleBalance} aria-label={balanceHidden ? "Mostrar saldo" : "Ocultar saldo"}>
+            {balanceHidden ? <IconEye size={19} /> : <IconEyeOff size={19} />}
+          </button>
         </div>
-        <div className="font-serif" style={{ fontSize: 28, color: "var(--navy-deep)", fontWeight: 500, margin: "4px 0" }}>
-          R$ 4.218,50
+        <div className={`balance-value${balanceHidden ? " hidden" : ""}`}>
+          {balanceHidden ? "R$ ••••••" : "R$ 4.218,50"}
         </div>
-        <div style={{ fontSize: 10, color: "var(--muted)" }}>
-          Conta corrente · Ag 0342 · CC 18745-9
-        </div>
+        <div className="balance-sub">Conta corrente · Ag 0342 · CC 18745-9</div>
       </div>
 
-      {/* Action buttons */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, padding: "16px 16px 12px" }}>
-        {[
-          { label: "Pagar", screen: "pay1" as const, icon: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /> },
-          { label: "Pix", screen: "pay1" as const, icon: <><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 014-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 01-4 4H3" /></> },
-          { label: "Extrato", screen: "summary" as const, icon: <><rect x={3} y={3} width={18} height={18} rx={2} /><line x1={3} y1={9} x2={21} y2={9} /><line x1={9} y1={21} x2={9} y2={9} /></> },
-          { label: "Clara", screen: "clara" as const, icon: <><path d="M12 1a3 3 0 013 3v7a3 3 0 01-6 0V4a3 3 0 013-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" /></> },
-        ].map(({ label, screen, icon }) => (
-          <button
-            key={label}
-            onClick={() => navigate(screen)}
-            style={{ background: "white", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 4px 10px", textAlign: "center", cursor: "pointer", transition: "all .15s" }}
-            onMouseEnter={(e) => { Object.assign((e.currentTarget as HTMLButtonElement).style, { borderColor: "var(--teal-lt)", transform: "translateY(-1px)", boxShadow: "0 4px 12px rgba(58,14,32,.06)" }); }}
-            onMouseLeave={(e) => { Object.assign((e.currentTarget as HTMLButtonElement).style, { borderColor: "var(--border)", transform: "translateY(0)", boxShadow: "none" }); }}
-          >
-            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 6px" }}>
-              {icon}
-            </svg>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "var(--navy-deep)", letterSpacing: ".02em" }}>{label}</div>
+      {/* Ações rápidas */}
+      <div className="quick">
+        {QUICK.map(({ label, screen, icon }, i) => (
+          <button key={label} className={`quick-btn rise d${i + 2}`} onClick={() => navigate(screen)}>
+            <span className="quick-ic">{icon}</span>
+            <span className="quick-label">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* Clara widget */}
-      <button
-        onClick={() => navigate("clara")}
-        style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 16px 12px", background: "linear-gradient(135deg, var(--accent), white)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", cursor: "pointer", transition: "all .15s", width: "calc(100% - 32px)" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--teal-lt)"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; }}
-      >
-        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, var(--teal), var(--navy))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2}>
-            <path d="M12 1a3 3 0 013 3v7a3 3 0 01-6 0V4a3 3 0 013-3z" />
-            <path d="M19 10v2a7 7 0 01-14 0v-2" />
-          </svg>
-        </div>
-        <div style={{ textAlign: "left" }}>
-          <strong style={{ color: "var(--navy-deep)", display: "block", fontSize: 12, marginBottom: 1 }}>Clara, assistente por voz</strong>
-          <span style={{ fontSize: 11, color: "var(--slate)" }}>Diga &ldquo;Clara, paga minha conta de luz&rdquo;</span>
-        </div>
+      {/* Clara CTA */}
+      <button className="clara-cta rise d3" onClick={() => navigate("clara")}>
+        <span className="clara-cta-orb"><IconMic size={21} /></span>
+        <span className="clara-cta-tx">
+          <strong>Clara, sua assistente</strong>
+          <span>Toque e diga: &ldquo;paga minha conta de luz&rdquo;</span>
+        </span>
       </button>
 
-      {/* Weekly summary card */}
-      <button
-        onClick={() => navigate("summary")}
-        style={{ display: "block", margin: "0 16px 16px", background: "white", border: "1px solid var(--border)", borderLeft: "3px solid var(--green)", borderRadius: "0 10px 10px 0", padding: "12px 14px", cursor: "pointer", textAlign: "left", width: "calc(100% - 32px)" }}
-      >
-        <div style={{ fontSize: 9, fontWeight: 800, color: "var(--green-dark)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 }}>
-          Resumo da Semana
+      {/* Resumo semanal */}
+      <div className="section-tag">Resumo da semana</div>
+      <button className="weekly rise" onClick={() => navigate("summary")}>
+        <div className="weekly-tx">
+          Esta semana entraram <strong>R$ 2.100</strong> e saíram <strong>R$ 647</strong>.
+          Seu maior gasto foi com supermercado.
         </div>
-        <div style={{ fontSize: 11, color: "var(--slate)", lineHeight: 1.45 }}>
-          Esta semana entraram <strong style={{ color: "var(--navy-deep)" }}>R$ 2.100</strong> e saíram{" "}
-          <strong style={{ color: "var(--navy-deep)" }}>R$ 647</strong>. Seu maior gasto foi com supermercado.
-        </div>
+        <div className="weekly-go">Ver resumo completo →</div>
       </button>
 
-      <SpecialistFAB />
-      <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", width: 100, height: 4, background: "rgba(0,0,0,.15)", borderRadius: 2, zIndex: 25 }} />
+      {/* Últimas movimentações */}
+      <div className="section-tag">Últimas movimentações</div>
+      <div className="tx-list">
+        {TX.map((t) => (
+          <div className="tx-item" key={t.name}>
+            <span className="tx-ic" style={{ background: t.bg, color: t.st }}>{t.icon}</span>
+            <div className="tx-meta">
+              <div className="tx-name">{t.name}</div>
+              <div className="tx-date">{t.date}</div>
+            </div>
+            <div className={`tx-val ${t.dir}`}>{t.val}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ height: 12 }} />
     </div>
   );
 }

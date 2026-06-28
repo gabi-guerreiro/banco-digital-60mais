@@ -1,0 +1,16 @@
+{
+  "name": "Banco 60+ · seu banco, no seu tempo",
+  "short_name": "Banco 60+",
+  "description": "App bancário funcional adaptado ao público 60+. Artefato acadêmico de Design Thinking.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2a081a",
+  "theme_color": "#2a081a",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

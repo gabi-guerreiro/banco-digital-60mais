@@ -1,103 +1,75 @@
 "use client";
 
 import { useApp } from "@/context/AppContext";
-import { SpecialistFAB } from "@/components/SpecialistFAB";
+import { IconBack } from "@/components/icons";
 
-const CATEGORIES = [
-  { label: "Supermercado", value: 380, color: "var(--teal)", pct: 59 },
-  { label: "Farmácia", value: 127.3, color: "var(--blue)", pct: 20 },
-  { label: "Padaria", value: 82, color: "var(--gold)", pct: 13 },
-  { label: "Outros", value: 57, color: "var(--muted)", pct: 9 },
+const CATS = [
+  { label: "Supermercado", value: "380,00", color: "var(--wine)", pct: 59 },
+  { label: "Farmácia", value: "127,30", color: "var(--blue)", pct: 20 },
+  { label: "Padaria", value: "82,00", color: "var(--gold)", pct: 13 },
+  { label: "Outros", value: "58,00", color: "var(--faint)", pct: 8 },
 ];
 
 export function SummaryScreen() {
   const { back } = useApp();
 
   return (
-    <div className="screen-fade" style={{ position: "absolute", inset: 0, top: 44, overflowY: "auto", background: "#f8f6f4" }}>
-      {/* Header */}
-      <div style={{ background: "var(--navy-deep)", color: "white", padding: "14px 18px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button onClick={back} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="15 18 9 12 15 6" /></svg>
-          Voltar
-        </button>
-        <div className="font-serif" style={{ fontSize: 15, fontWeight: 500 }}>
-          Resumo <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Semanal</em>
-        </div>
+    <>
+      <div className="topbar">
+        <button className="iconbtn" onClick={back}><IconBack size={16} /> Voltar</button>
+        <div className="topbar-title">Resumo <em>semanal</em></div>
+        <div className="topbar-spacer" />
       </div>
 
-      <div style={{ padding: "14px 16px" }}>
-        {/* Period */}
-        <div style={{ textAlign: "center", fontSize: 10, color: "var(--muted)", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 14 }}>
-          2 a 8 de junho de 2026
-        </div>
+      <div className="scroll">
+        <div className="pad">
+          <div className="sum-period">2 a 8 de junho de 2026</div>
 
-        {/* Narrative block */}
-        <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 10, padding: 16, marginBottom: 14 }}>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--slate)", margin: 0 }}>
-            Esta semana <strong style={{ color: "var(--navy-deep)" }}>entraram R$ 2.100,00</strong> da sua aposentadoria (INSS).
-            Você gastou <strong style={{ color: "var(--navy-deep)" }}>R$ 647,30</strong> no total.
-          </p>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--slate)", margin: "8px 0 0" }}>
-            Seu maior gasto foi com <em style={{ color: "var(--teal)", fontStyle: "italic" }}>supermercado</em> (R$ 380,00),
-            seguido de <em style={{ color: "var(--teal)", fontStyle: "italic" }}>farmácia</em> (R$ 127,30) e{" "}
-            <em style={{ color: "var(--teal)", fontStyle: "italic" }}>padaria</em> (R$ 82,00).
-          </p>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--slate)", margin: "8px 0 0" }}>
-            Sobrou <strong style={{ color: "var(--navy-deep)" }}>R$ 1.452,70</strong> —{" "}
-            <em style={{ color: "var(--green-dark)", fontStyle: "italic" }}>mais do que na semana passada</em>, quando sobraram R$ 1.190.
-          </p>
-        </div>
-
-        {/* Bar chart */}
-        <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 10, padding: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
-            Entradas vs Saídas · Últimas 4 semanas
+          <div className="sum-block">
+            <p>Esta semana <strong>entraram R$ 2.100,00</strong> da sua aposentadoria (INSS). Você gastou <strong>R$ 647,30</strong> no total.</p>
+            <p>Seu maior gasto foi com <em>supermercado</em> (R$ 380,00), seguido de <em>farmácia</em> (R$ 127,30) e <em>padaria</em> (R$ 82,00).</p>
+            <p>Sobrou <strong>R$ 1.452,70</strong> — <em className="up">mais do que na semana passada</em>, quando sobraram R$ 1.190.</p>
           </div>
-          <svg viewBox="0 0 240 80" width="100%" style={{ display: "block" }}>
-            {/* Week 1 */}
-            <rect x={10} y={24} width={40} height={44} fill="var(--green)" rx={3} opacity={0.8} />
-            <text x={30} y={54} fontSize={8} fill="white" textAnchor="middle" fontFamily="inherit" fontWeight={700}>2,1k</text>
-            <rect x={55} y={42} width={40} height={26} fill="var(--coral)" rx={3} opacity={0.6} />
-            <text x={75} y={60} fontSize={8} fill="white" textAnchor="middle" fontFamily="inherit" fontWeight={700}>890</text>
-            {/* Week 2 */}
-            <rect x={110} y={24} width={40} height={44} fill="var(--green)" rx={3} opacity={0.8} />
-            <text x={130} y={54} fontSize={8} fill="white" textAnchor="middle" fontFamily="inherit" fontWeight={700}>2,1k</text>
-            <rect x={155} y={46} width={40} height={22} fill="var(--coral)" rx={3} opacity={0.6} />
-            <text x={175} y={62} fontSize={8} fill="white" textAnchor="middle" fontFamily="inherit" fontWeight={700}>647</text>
-            {/* Labels */}
-            <text x={30} y={78} fontSize={7} fill="var(--muted)" textAnchor="middle" fontFamily="inherit">Sem 3</text>
-            <text x={130} y={78} fontSize={7} fill="var(--muted)" textAnchor="middle" fontFamily="inherit">Sem 4</text>
-            {/* Legend */}
-            <rect x={180} y={30} width={8} height={8} fill="var(--green)" rx={2} />
-            <text x={192} y={38} fontSize={7} fill="var(--muted)" fontFamily="inherit">Entradas</text>
-            <rect x={180} y={44} width={8} height={8} fill="var(--coral)" rx={2} />
-            <text x={192} y={52} fontSize={7} fill="var(--muted)" fontFamily="inherit">Saídas</text>
-          </svg>
-        </div>
 
-        {/* Categories breakdown */}
-        <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 10, padding: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
-            Gastos por categoria
+          {/* Gráfico de barras */}
+          <div className="sum-block">
+            <div className="sum-card-title">Entradas vs Saídas · últimas 4 semanas</div>
+            <svg viewBox="0 0 260 96" width="100%" aria-hidden="true">
+              {[
+                { x: 16, in: 78, out: 38, lin: "2,0k", lout: "1,1k", lbl: "Sem 1" },
+                { x: 78, in: 80, out: 30, lin: "2,1k", lout: "890", lbl: "Sem 2" },
+                { x: 140, in: 78, out: 34, lin: "2,0k", lout: "950", lbl: "Sem 3" },
+                { x: 202, in: 80, out: 24, lin: "2,1k", lout: "647", lbl: "Sem 4" },
+              ].map((b) => (
+                <g key={b.lbl}>
+                  <rect x={b.x} y={80 - b.in} width={18} height={b.in} rx={3} fill="var(--green)" opacity={0.85} />
+                  <rect x={b.x + 22} y={80 - b.out} width={18} height={b.out} rx={3} fill="var(--coral)" opacity={0.7} />
+                  <text x={b.x + 9} y={78 - b.in} fontSize={7} fill="var(--green-dark)" textAnchor="middle" fontFamily="JetBrains Mono">{b.lin}</text>
+                  <text x={b.x + 20} y={92} fontSize={7} fill="var(--muted)" textAnchor="middle" fontFamily="JetBrains Mono">{b.lbl}</text>
+                </g>
+              ))}
+            </svg>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {CATEGORIES.map(({ label, value, color, pct }) => (
-              <div key={label}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: "var(--navy-deep)", fontWeight: 600 }}>{label}</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>R$ {value.toFixed(2).replace(".", ",")}</span>
+
+          {/* Categorias */}
+          <div className="sum-block">
+            <div className="sum-card-title">Para onde foi o dinheiro</div>
+            <div className="cats">
+              {CATS.map((c, i) => (
+                <div key={c.label}>
+                  <div className="cat-row-top">
+                    <span className="cat-name">{c.label}</span>
+                    <span className="cat-val">R$ {c.value}</span>
+                  </div>
+                  <div className="cat-bar">
+                    <div className="cat-fill" style={{ width: `${c.pct}%`, background: c.color, animationDelay: `${i * 0.1}s` }} />
+                  </div>
                 </div>
-                <div style={{ height: 6, background: "var(--light)", borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width .6s ease" }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-
-      <SpecialistFAB />
-    </div>
+    </>
   );
 }

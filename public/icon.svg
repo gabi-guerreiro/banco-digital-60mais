@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Banco 60+">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4d1530"/>
+      <stop offset="0.55" stop-color="#3a0e20"/>
+      <stop offset="1" stop-color="#2a081a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.2" r="0.7">
+      <stop offset="0" stop-color="#e8a0b4" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#e8a0b4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g fill="none" stroke="#e8a0b4" stroke-opacity="0.16">
+    <circle cx="392" cy="120" r="90"/>
+    <circle cx="392" cy="120" r="150"/>
+  </g>
+  <text x="256" y="330" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="270" font-style="italic" fill="#faf6f7" font-weight="500">B</text>
+  <circle cx="350" cy="316" r="20" fill="#e8a0b4"/>
+</svg>
