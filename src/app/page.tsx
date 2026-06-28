@@ -1,65 +1,108 @@
-import Image from "next/image";
+import { AppProvider } from "@/context/AppContext";
+import { PhoneFrame } from "@/components/PhoneFrame";
 
-export default function Home() {
+const STEPS = [
+  { num: 1, title: "Tela Inicial — Login + Saldo", desc: "Saldo em fonte 28px. Menu simplificado.", tag: "F01 Clareza" },
+  { num: 2, title: "Clara — Assistente por Voz", desc: '"Clara, paga minha conta de luz." NLP coloquial.', tag: "F02 Clara" },
+  { num: 3, title: "Camada 1 — Linguagem Natural", desc: "Transação traduzida para conversa. Sem jargão.", tag: "F03 Confirmação" },
+  { num: 4, title: "Camada 2 — Biometria + PIN", desc: "Confirmação de identidade antes de qualquer saída.", tag: "F03 Confirmação" },
+  { num: 5, title: "Camada 3 — Comprovante Persistente", desc: "Voz confirma. Protocolo numerado. Salvar. Compartilhar.", tag: "F03 Confirmação" },
+  { num: 6, title: "Resumo Narrativo Semanal", desc: "Dados viram história. Controle financeiro devolvido.", tag: "F04 Resumo" },
+  { num: 7, title: "Linha Direta — Especialista 60+", desc: "Um toque. Humano em <2min. Contexto compartilhado.", tag: "F05 Especialista" },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <AppProvider>
+      <main style={{ minHeight: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", alignItems: "center" }}>
+
+        {/* Header */}
+        <div style={{ width: "100%", background: "var(--navy)", padding: "28px 40px 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 24 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--rose)", marginBottom: 10 }}>
+              Banco Digital 60+ · Design Thinking
+            </div>
+            <h1 className="font-serif" style={{ fontSize: 26, fontWeight: 400, color: "white", lineHeight: 1.15, maxWidth: 560 }}>
+              App Bancário Adaptado ao <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Segmento 60+</em>
+            </h1>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 11, color: "rgba(255,255,255,.5)", lineHeight: 1.9, flexShrink: 0 }}>
+            <strong style={{ color: "rgba(255,255,255,.9)", display: "block", fontSize: 13 }}>Marília Pinheiro</strong>
+            Módulo 2 · Semana 10 · Design Thinking
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(232,160,180,.2)", border: "1px solid rgba(232,160,180,.35)", padding: "4px 10px", borderRadius: 20, marginTop: 10, fontSize: 10, fontWeight: 700, color: "var(--rose)", textTransform: "uppercase" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--rose)", display: "inline-block", animation: "pulse 2s ease infinite" }} />
+              Demo Interativo
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Gradient bar */}
+        <div style={{ height: 4, width: "100%", background: "linear-gradient(90deg, var(--navy) 0%, var(--teal) 35%, var(--teal-lt) 60%, var(--rose) 80%, var(--light) 100%)" }} />
+
+        {/* Main content */}
+        <div style={{ width: "100%", maxWidth: 1100, padding: "36px 40px 48px", display: "grid", gridTemplateColumns: "340px 1fr", gap: 48 }}>
+
+          {/* Phone */}
+          <div style={{ position: "sticky", top: 24, alignSelf: "flex-start" }}>
+            <PhoneFrame />
+          </div>
+
+          {/* Side panel */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--teal)", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 16, height: 2, background: "var(--teal)", display: "inline-block" }} />
+              Jornada Interativa
+            </div>
+            <h2 className="font-serif" style={{ fontSize: 24, fontWeight: 500, color: "var(--navy-deep)", marginBottom: 8, lineHeight: 1.15 }}>
+              Percorra a jornada da <em style={{ fontStyle: "italic", color: "var(--teal)" }}>Maria Lúcia</em> em tempo real
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.7, marginBottom: 24 }}>
+              Interaja diretamente no celular à esquerda. Navegue pelas telas, converse com a Clara,
+              complete o pagamento e ouça o comprovante em voz alta. Cada passo abaixo descreve o que você vai encontrar.
+            </p>
+
+            {/* Steps */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+              {STEPS.map(({ num, title, desc, tag }) => (
+                <div key={num} style={{ display: "grid", gridTemplateColumns: "36px 1fr auto", gap: 12, alignItems: "center", padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 8, background: "white" }}>
+                  <div className="font-serif" style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--light)", color: "var(--muted)", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {num}
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--navy-deep)", marginBottom: 2 }}>{title}</h4>
+                    <p style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.3, margin: 0 }}>{desc}</p>
+                  </div>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: "var(--teal)", background: "var(--accent)", padding: "3px 7px", borderRadius: 3, letterSpacing: ".06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                    {tag}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Principles card */}
+            <div style={{ background: "linear-gradient(135deg, var(--navy-deep), var(--navy))", borderRadius: 10, padding: "16px 18px", color: "white", marginBottom: 16 }}>
+              <h4 className="font-serif" style={{ fontSize: 14, fontWeight: 500, color: "var(--rose)", marginBottom: 6 }}>
+                Princípios ativos nesta demonstração
+              </h4>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,.75)", lineHeight: 1.55, margin: 0 }}>
+                <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Norman:</em> Visibilidade (saldo imediato), Feedback (3 camadas), Affordance (botões 48dp+).{" "}
+                <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Gestalt:</em> Proximidade (cards), Figura/Fundo (contraste 7:1), Prägnanz (1 intenção por tela).{" "}
+                <em style={{ color: "var(--rose)", fontStyle: "italic" }}>Nielsen:</em> H1 (status), H2 (linguagem real), H5 (prevenção de erros), H10 (especialista visível).
+              </p>
+            </div>
+
+            {/* Feature badges */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {["F01 Modo Clareza", "F02 Assistente Clara", "F03 Confirmação 3 Camadas", "F04 Resumo Narrativo", "F05 Linha Direta 60+"].map((f) => (
+                <span key={f} style={{ fontSize: 10, fontWeight: 700, color: "var(--teal)", background: "var(--accent)", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 20 }}>
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
+
       </main>
-    </div>
+    </AppProvider>
   );
 }

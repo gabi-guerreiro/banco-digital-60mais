@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --navy: #3a0e20;
+  --navy-deep: #2a081a;
+  --teal: #8b1a3c;
+  --teal-lt: #c2415f;
+  --rose: #e8a0b4;
+  --rose-soft: #f3c8d4;
+  --slate: #3d3342;
+  --muted: #7a6878;
+  --light: #f3e9ed;
+  --border: #e4d2da;
+  --white: #ffffff;
+  --accent: #faeef2;
+  --paper: #faf7f9;
+  --green: #4faf8f;
+  --green-bg: #eaf6f2;
+  --green-dark: #2a7a55;
+  --blue: #5b7c99;
+  --blue-bg: #e8eef5;
+  --blue-dark: #3a5a78;
+  --coral: #d06060;
+  --coral-bg: #fceeed;
+  --amber: #b7620a;
+  --amber-lt: #fdf0dc;
+  --gold: #d4a04a;
+  --gold-bg: #fbf3e0;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--slate);
+  -webkit-font-smoothing: antialiased;
 }
+
+@keyframes screenFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes checkPop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+@keyframes bioPulse {
+  0%, 100% { border-color: var(--teal-lt); box-shadow: 0 0 0 0 rgba(139,26,60,.15); }
+  50%       { border-color: var(--teal); box-shadow: 0 0 0 12px rgba(139,26,60,0); }
+}
+
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,175,143,.3); }
+  50%       { box-shadow: 0 0 0 10px rgba(79,175,143,0); }
+}
+
+@keyframes msgSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.screen-fade    { animation: screenFade .35s ease; }
+.check-pop      { animation: checkPop .4s ease; }
+.bio-pulse      { animation: bioPulse 2s ease infinite; }
+.ring-pulse     { animation: ringPulse 1.5s ease infinite; }
+.msg-slide      { animation: msgSlide .3s ease; }
+
+.font-serif { font-family: 'Fraunces', Georgia, serif; }
